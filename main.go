@@ -56,7 +56,7 @@ func main() {
 		fmt.Printf("Error reading csv meeting data from %s: %v\n", os.Args[1], err)
 		os.Exit(1)
 	}
-	slots, err := findMinimumSlots(meetings)
+	slots, err := findMinimalSlots(meetings)
 	for sl_i, sl := range slots {
 		for _, mt := range sl.meetings {
 			fmt.Printf("Slot %d, %q, %q\n", sl_i, mt.title, mt.assistants)
@@ -81,7 +81,7 @@ func createMeetingsFromCVSData(csvData [][]string) ([]meeting, error) {
 	return meetings, nil
 }
 
-func findMinimumSlots(meetings []meeting) ([]slot, error) {
+func findMinimalSlots(meetings []meeting) ([]slot, error) {
 	adj := calcAdjacencyMatrix(meetings)
 
 	// Initially, one slot per meeting
@@ -103,16 +103,17 @@ func findMinimumSlots(meetings []meeting) ([]slot, error) {
 // Returns true if at least one slot has been consolidated.
 func removeSlotsIteration(adj adjacencyMat, slots *[]slot) (removed bool) {
 	for s_i, sl := range *slots {
+		// If no meetings, the slot was already removed
 		if len(sl.meetings) == 0 {
 			continue
 		}
 		// For each meeting in the slot, check if it can be moved to another slot
-		compatibleSlots := make(map[int]int, len(sl.meetings))
+		compatibleSlots := make([]int, len(sl.meetings))
 		allCompatible := true
 		for m_i, m := range sl.meetings {
 			compatibleSlots[m_i] = -1
 			for s_j, otherSl := range *slots {
-				if s_i == s_j {
+				if s_i == s_j || len(otherSl.meetings) == 0 {
 					continue
 				}
 				if slotCompatibleWithMeeting(otherSl, m, adj) {
@@ -173,8 +174,8 @@ func calcAdjacencyMatrix(meetings []meeting) adjacencyMat {
 // that is, will return true if there are no coincident assistants
 // between the two meetings, otherwise it will return false.
 func compatibleMeetings(m1, m2 *meeting) bool {
-	for p1 := range m1.assistants {
-		for p2 := range m2.assistants {
+	for _, p1 := range m1.assistants {
+		for _, p2 := range m2.assistants {
 			if p1 == p2 {
 				return false
 			}
