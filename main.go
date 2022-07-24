@@ -33,8 +33,8 @@ type slot struct {
 // 4. Apply removal strategy iteratively until the number of slots
 //    does not decrease anymore
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Printf("Usage: %s <csv_file>\n", os.Args[0])
+	if len(os.Args) != 3 {
+		fmt.Printf("Usage: %s <csv_file_in> <csv_file_out>\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -56,9 +56,17 @@ func main() {
 		fmt.Printf("Error reading csv meeting data from %s: %v\n", os.Args[1], err)
 		os.Exit(1)
 	}
+
+	fmt.Println("Running the algorithm...")
 	slots, err := findMinimalSlots(meetings)
 
-	csvWriter := csv.NewWriter(os.Stdout)
+	outFile, err := os.Create(os.Args[2])
+	if err != nil {
+		fmt.Printf("Cannot open %s for writing: %v\n", os.Args[1], err)
+		os.Exit(1)
+	}
+	defer outFile.Close()
+	csvWriter := csv.NewWriter(outFile)
 	for sl_i, sl := range slots {
 		for _, mt := range sl.meetings {
 			assistants := ""
@@ -73,6 +81,7 @@ func main() {
 		}
 	}
 	csvWriter.Flush()
+	fmt.Println("Finished")
 }
 
 func createMeetingsFromCSVData(csvData [][]string) ([]meeting, error) {
