@@ -113,6 +113,7 @@ func removeSlotsIteration(adj adjacencyMat, slots *[]slot) (removed bool) {
 		for m_i, m := range sl.meetings {
 			compatibleSlots[m_i] = -1
 			for s_j, otherSl := range *slots {
+				// Ignore if same slot or if removed slot
 				if s_i == s_j || len(otherSl.meetings) == 0 {
 					continue
 				}
@@ -130,9 +131,9 @@ func removeSlotsIteration(adj adjacencyMat, slots *[]slot) (removed bool) {
 		// the meetings and remove the slot.
 		if allCompatible {
 			for m_i, m := range sl.meetings {
-				newSlot := compatibleSlots[m_i]
-				(*slots)[newSlot].meetings =
-					append((*slots)[newSlot].meetings, m)
+				compatSl := compatibleSlots[m_i]
+				(*slots)[compatSl].meetings =
+					append((*slots)[compatSl].meetings, m)
 			}
 			(*slots)[s_i] = slot{}
 			removed = true
@@ -142,7 +143,7 @@ func removeSlotsIteration(adj adjacencyMat, slots *[]slot) (removed bool) {
 	return removed
 }
 
-// Will be compatible if all meetings already in the slot have distance one to m
+// Will be compatible if all meetings already in the slot are adjacent to m
 func slotCompatibleWithMeeting(sl slot, m meeting, adj adjacencyMat) bool {
 	for _, slotMeeting := range sl.meetings {
 		if adj[slotMeeting.index][m.index] != 1 {
@@ -152,6 +153,9 @@ func slotCompatibleWithMeeting(sl slot, m meeting, adj adjacencyMat) bool {
 	return true
 }
 
+// calcAdjacencyMatrix finds out the adjacency matrix for a set of
+// meetings, that is, matrix values are 1 if row/column meetings are
+// compatible, 0 otherwise.
 func calcAdjacencyMatrix(meetings []meeting) adjacencyMat {
 	numMeets := len(meetings)
 	adj := make([][]uint8, numMeets)
