@@ -158,3 +158,40 @@ func TestRemoveSlotsIteration2(t *testing.T) {
 		t.Error(slots, "final slots: expected", expSlots)
 	}
 }
+
+func TestFindMinimalSlots(t *testing.T) {
+	m0 := meeting{index: 0, title: "Meeting 0", assistants: []string{"a", "b"}}
+	m1 := meeting{index: 1, title: "Meeting 1", assistants: []string{"c", "d"}}
+	m2 := meeting{index: 2, title: "Meeting 2", assistants: []string{"e", "g"}}
+	m3 := meeting{index: 3, title: "Meeting 3", assistants: []string{"e", "h"}}
+	mts := []meeting{m0, m1, m2, m3}
+	slots, err := findMinimalSlots(mts)
+	if err != nil {
+		t.Error("unexpected error while calling findMinimalSlots:", err)
+	}
+	expSlots := []slot{
+		{meetings: []meeting{m2, m1, m0}},
+		{meetings: []meeting{m3}},
+	}
+	if !reflect.DeepEqual(slots, expSlots) {
+		t.Error(slots, "final slots: expected", expSlots)
+	}
+}
+
+func TestCreateMeetingsFromCSVData(t *testing.T) {
+	csvData := [][]string{
+		{"Meeting 0", "Maria Barker, John Garcia"},
+		{"Meeting 1", "Antonio Sanchez, Ana de Austria"},
+	}
+	meetings, err := createMeetingsFromCSVData(csvData)
+	if err != nil {
+		t.Error("unexpected error while calling createMeetingsFromCSVData:", err)
+	}
+	expMeets := []meeting{
+		{0, "Meeting 0", []string{"Maria Barker", "John Garcia"}, 0},
+		{1, "Meeting 1", []string{"Antonio Sanchez", "Ana de Austria"}, 0},
+	}
+	if !reflect.DeepEqual(meetings, expMeets) {
+		t.Error(meetings, "csv data read: expected", expMeets)
+	}
+}
