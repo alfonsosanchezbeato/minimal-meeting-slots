@@ -2,6 +2,9 @@
 package main
 
 import (
+	"bytes"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -193,5 +196,28 @@ func TestCreateMeetingsFromCSVData(t *testing.T) {
 	}
 	if !reflect.DeepEqual(meetings, expMeets) {
 		t.Error(meetings, "csv data read: expected", expMeets)
+	}
+}
+
+func TestMain(t *testing.T) {
+	out, err := ioutil.TempFile("", "slots*.csv")
+	if err != nil {
+		t.Error("cannot create temp file:", err)
+	}
+	defer os.Remove(out.Name())
+	out.Close()
+
+	os.Args = []string{"./main", "test-data/test1.csv", out.Name()}
+	main()
+	outData, err := os.ReadFile(out.Name())
+	if err != nil {
+		t.Error("cannot read result from processing of test1:", err)
+	}
+	expected, err := os.ReadFile("test-data/res1.csv")
+	if err != nil {
+		t.Error("cannot read res1.csv:", err)
+	}
+	if bytes.Compare(outData, expected) != 0 {
+		t.Errorf("expected:\n%q\n, obtained:\n%q\n", string(expected), string(outData))
 	}
 }
