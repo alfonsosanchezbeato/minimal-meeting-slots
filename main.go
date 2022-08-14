@@ -82,13 +82,13 @@ func writeDot(outPath string, adj adjacencyMat, slots []slot) error {
 
 	var sb strings.Builder
 	sb.WriteString("strict graph {\n")
-	sb.WriteString("  graph [overlap = false][outputorder = \"edgesfirst\"]\n")
-	sb.WriteString("  node [style = \"filled\"]\n")
+	sb.WriteString("  graph [overlap=false outputorder=edgesfirst]\n")
+	sb.WriteString("  node [fontcolor=black shape=circle fixedsize=true style=filled]\n")
 	numMeets := len(adj[0])
 	// Same color for meetings in same slot
 	for sl_i, sl := range slots {
 		for _, mt := range sl.meetings {
-			sb.WriteString(fmt.Sprintf("  %d [color = %s]\n",
+			sb.WriteString(fmt.Sprintf("  %d [color=%s]\n",
 				mt.index, slotColor[sl_i%len(slotColor)]))
 		}
 	}
