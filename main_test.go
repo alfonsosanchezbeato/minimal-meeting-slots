@@ -168,7 +168,7 @@ func TestFindMinimalSlots(t *testing.T) {
 	m2 := meeting{index: 2, title: "Meeting 2", assistants: []string{"e", "g"}}
 	m3 := meeting{index: 3, title: "Meeting 3", assistants: []string{"e", "h"}}
 	mts := []meeting{m0, m1, m2, m3}
-	slots, err := findMinimalSlots(mts)
+	slots, _, err := findMinimalSlots(mts)
 	if err != nil {
 		t.Error("unexpected error while calling findMinimalSlots:", err)
 	}

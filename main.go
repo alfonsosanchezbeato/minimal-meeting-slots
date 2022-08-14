@@ -33,8 +33,8 @@ type slot struct {
 // 4. Apply removal strategy iteratively until the number of slots
 //    does not decrease anymore
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Printf("Usage: %s <csv_file_in> <csv_file_out>\n", os.Args[0])
+	if len(os.Args) < 3 || len(os.Args) > 4 {
+		fmt.Printf("Usage: %s <csv_file_in> <csv_file_out> [dot_out]\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -58,14 +58,91 @@ func main() {
 	}
 
 	fmt.Println("Running the algorithm...")
-	slots, err := findMinimalSlots(meetings)
+	slots, adj, err := findMinimalSlots(meetings)
 
-	outFile, err := os.Create(os.Args[2])
-	if err != nil {
-		fmt.Printf("Cannot open %s for writing: %v\n", os.Args[1], err)
+	if err := writeSolution(os.Args[2], slots); err != nil {
+		fmt.Printf("Cannot write solution: %v\n", err)
 		os.Exit(1)
 	}
+
+	if len(os.Args) > 3 {
+		if err := writeDot(os.Args[3], adj, slots); err != nil {
+			fmt.Printf("Cannot write dot file: %v\n", err)
+			os.Exit(1)
+		}
+	}
+}
+
+func writeDot(outPath string, adj adjacencyMat, slots []slot) error {
+	outFile, err := os.Create(outPath)
+	if err != nil {
+		return fmt.Errorf("cannot open %s for writing: %v", outPath, err)
+	}
 	defer outFile.Close()
+
+	var sb strings.Builder
+	sb.WriteString("strict graph {\n")
+	sb.WriteString("  graph [overlap = false][outputorder = \"edgesfirst\"]\n")
+	sb.WriteString("  node [style = \"filled\"]\n")
+	numMeets := len(adj[0])
+	// Same color for meetings in same slot
+	for sl_i, sl := range slots {
+		for _, mt := range sl.meetings {
+			sb.WriteString(fmt.Sprintf("  %d [color = %s]\n",
+				mt.index, slotColor[sl_i%len(slotColor)]))
+		}
+	}
+	// Connect adjacent meetings
+	for m_i := 0; m_i < numMeets; m_i++ {
+		for m_j := m_i + 1; m_j < numMeets; m_j++ {
+			if adj[m_i][m_j] != 1 {
+				continue
+			}
+			sb.WriteString(fmt.Sprintf("  %d -- %d\n", m_i, m_j))
+		}
+	}
+	// Finish graph
+	sb.WriteString("}\n")
+
+	if _, err := outFile.WriteString(sb.String()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var slotColor = [...]string{
+	"aqua",
+	"aquamarine",
+	"beige",
+	"brown",
+	"cadetblue",
+	"coral",
+	"cornflowerblue",
+	"crimson",
+	"darkgreen",
+	"darkorchid",
+	"darkseagreen4",
+	"cyan4",
+	"darkorange",
+	"darkolivegreen4",
+	"deeppink",
+	"firebrick1",
+	"dimgray",
+	"darkviolet",
+	"darkseagreen",
+	"floralwhite",
+	"darkseagreen2",
+	"darkred",
+}
+
+func writeSolution(outPath string, slots []slot) error {
+	outFile, err := os.Create(outPath)
+	if err != nil {
+		return fmt.Errorf("cannot open %s for writing: %v", outPath, err)
+	}
+	defer outFile.Close()
+
 	csvWriter := csv.NewWriter(outFile)
 	for sl_i, sl := range slots {
 		for _, mt := range sl.meetings {
@@ -75,13 +152,17 @@ func main() {
 				assistants += ", "
 			}
 			assistants += mt.assistants[len(mt.assistants)-1]
-			csvWriter.Write([]string{fmt.Sprintf("slot %d", sl_i),
+			if err := csvWriter.Write([]string{fmt.Sprintf("slot %d", sl_i),
 				mt.title,
-				assistants})
+				assistants}); err != nil {
+				return fmt.Errorf("cannot write to %s: %v", outPath, err)
+			}
 		}
 	}
 	csvWriter.Flush()
 	fmt.Println("Finished")
+
+	return nil
 }
 
 func createMeetingsFromCSVData(csvData [][]string) ([]meeting, error) {
@@ -101,7 +182,7 @@ func createMeetingsFromCSVData(csvData [][]string) ([]meeting, error) {
 	return meetings, nil
 }
 
-func findMinimalSlots(meetings []meeting) ([]slot, error) {
+func findMinimalSlots(meetings []meeting) ([]slot, adjacencyMat, error) {
 	adj := calcAdjacencyMatrix(meetings)
 
 	// Initially, one slot per meeting
@@ -124,7 +205,7 @@ func findMinimalSlots(meetings []meeting) ([]slot, error) {
 		}
 	}
 
-	return consolidatedSlots, nil
+	return consolidatedSlots, adj, nil
 }
 
 // Implements the removal strategy, one iteration across current slots.
