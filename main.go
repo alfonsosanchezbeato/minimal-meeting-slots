@@ -22,10 +22,12 @@ type slot struct {
 	meetings []meeting
 }
 
-// Input must be in the form of a csv file, with the first column being
-// the meeting title and the second the list of assistants.
-// Output will be a csv file with two columns, one with the slot number
-// and the second with the simultaneous meetings happening in that slot.
+// Input must be in the form of a csv file, with the first column
+// being the meeting title and the second the list of assistants.
+// Output will be a csv file with three columns, being the first one
+// the assigned slot number, the second one the meeting title, and the
+// third one the meeting invitees. Optionally, a dot language graph
+// can be generated.
 // Steps:
 // 1. Read meetings from input
 // 2. Calculate adjacency matrix
@@ -59,6 +61,10 @@ func main() {
 
 	fmt.Println("Running the algorithm...")
 	slots, adj, err := findMinimalSlots(meetings)
+	if err != nil {
+		fmt.Printf("Error running minimal slots algorithm: %v\n", err)
+		os.Exit(1)
+	}
 
 	if err := writeSolution(os.Args[2], slots); err != nil {
 		fmt.Printf("Cannot write solution: %v\n", err)
@@ -71,6 +77,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	fmt.Println("Finished")
 }
 
 func writeDot(outPath string, adj adjacencyMat, slots []slot) error {
@@ -160,7 +167,6 @@ func writeSolution(outPath string, slots []slot) error {
 		}
 	}
 	csvWriter.Flush()
-	fmt.Println("Finished")
 
 	return nil
 }
@@ -188,14 +194,17 @@ func findMinimalSlots(meetings []meeting) ([]slot, adjacencyMat, error) {
 	// Initially, one slot per meeting
 	slots := make([]slot, len(meetings))
 	for i := range slots {
-		slots[i].meetings = append(slots[i].meetings, meetings[i])
+		slots[i].meetings = []meeting{meetings[i]}
 		meetings[i].index = i
 		meetings[i].slot = i
 	}
 
-	// Iterated until there is no slot consolidation
+	// Iterate until there is no slot consolidation
+	numIter := 0
 	for removed := true; removed == true; removed = removeSlotsIteration(adj, &slots) {
+		numIter += 1
 	}
+	fmt.Printf("Total number of iterations has been %d\n", numIter)
 
 	// Remove emptied slots
 	var consolidatedSlots []slot
